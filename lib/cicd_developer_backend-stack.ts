@@ -81,7 +81,7 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
               owner: 'hemanth', // ⬅️ Replace with your GitHub username
               repo: 'CICDDeveloper_Backend',        // ⬅️ Replace with your GitHub repo name
               branch: 'main',
-              oauthToken: githubToken.secretValue
+              oauthToken: githubToken.secretValue,
               output: sourceOutput,
             }),
           ],
