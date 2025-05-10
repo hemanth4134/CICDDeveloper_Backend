@@ -1,20 +1,19 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as codecommit from 'aws-cdk-lib/aws-codecommit';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
+import { SecretValue } from 'aws-cdk-lib';
 
 export class CicdDeveloperBackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-
+    // S3 Bucket
     const bucket = new s3.Bucket(this, 'DevPortalBucket');
 
     // DynamoDB Table
@@ -34,7 +33,7 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
         exports.handler = async (event) => {
           const body = JSON.parse(event.body);
           const item = { requestId: uuidv4(), ...body };
-          await ddb.put({ TableName: "${table.tableName}", Item: item }).promise();
+          await ddb.put({ TableName: process.env.TABLE_NAME, Item: item }).promise();
           return { statusCode: 200, body: JSON.stringify(item) };
         };
       `),
@@ -54,33 +53,31 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
     const form = api.root.addResource('submit');
     form.addMethod('POST');
 
-    // CodeCommit Repository
-    // const repo = new codecommit.Repository(this, 'DevPortalRepo', {
-    //   repositoryName: 'dev-portal-repo',
-    // });
-
     // CodeBuild Project
     const buildProject = new codebuild.PipelineProject(this, 'DevPortalBuild', {
       environment: {
         buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
       },
     });
-    
 
-    // CodePipeline
+    // Pipeline Artifacts
     const sourceOutput = new codepipeline.Artifact();
     const buildOutput = new codepipeline.Artifact();
 
+    // CodePipeline
     new codepipeline.Pipeline(this, 'DevPortalPipeline', {
+      pipelineName: 'DevPortalPipeline',
       stages: [
         {
           stageName: 'Source',
           actions: [
-            new codepipeline_actions.CodeCommitSourceAction({
-              actionName: 'Checkout',
-              repository: repo,
+            new codepipeline_actions.GitHubSourceAction({
+              actionName: 'GitHub_Source',
+              owner: 'hemanth', // ⬅️ Replace with your GitHub username
+              repo: 'CICDDeveloper_Backend',        // ⬅️ Replace with your GitHub repo name
+              branch: 'main',
+              oauthToken: SecretValue.secretsManager('github-token'), // ⬅️ GitHub token in Secrets Manager
               output: sourceOutput,
-              branch: 'master',
             }),
           ],
         },
@@ -99,9 +96,9 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
           stageName: 'Deploy',
           actions: [
             new codepipeline_actions.S3DeployAction({
-              actionName: 'S3Deploy',
+              actionName: 'DeployToS3',
               input: buildOutput,
-              bucket,
+              bucket: bucket,
             }),
           ],
         },
@@ -109,11 +106,3 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
     });
   }
 }
-    // The code that defines your stack goes here
-
-    // example resource
-    // const queue = new sqs.Queue(this, 'CicdDeveloperBackendQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
-  
-
