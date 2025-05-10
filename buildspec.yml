@@ -18,13 +18,16 @@ phases:
     commands:
       - echo Building the application...
       - npm run build # Replace with your build command if different
+      - cdk synth
+      - cdk bootstrap
+      - cdk deploy --require-approval never
 
-  post_build:
-    commands:
-      - echo Build completed on `date`
-      - echo Uploading artifacts or performing post-build tasks...
+#   post_build:
+#     commands:
+#       - echo Build completed on `date`
+#       - echo Uploading artifacts or performing post-build tasks...
 
-artifacts:
-  files:
-    - '**/*'  # Include all files in the output artifact, customize as needed
-  base-directory: dist # Change to your build output directory (e.g., build, dist)
+# artifacts:
+#   files:
+#     - '**/*'  # Include all files in the output artifact, customize as needed
+  # base-directory: dist # Change to your build output directory (e.g., build, dist)
