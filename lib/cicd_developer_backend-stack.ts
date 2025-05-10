@@ -55,9 +55,9 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
     form.addMethod('POST');
 
     // CodeCommit Repository
-    const repo = new codecommit.Repository(this, 'DevPortalRepo', {
-      repositoryName: 'dev-portal-repo',
-    });
+    // const repo = new codecommit.Repository(this, 'DevPortalRepo', {
+    //   repositoryName: 'dev-portal-repo',
+    // });
 
     // CodeBuild Project
     const buildProject = new codebuild.PipelineProject(this, 'DevPortalBuild', {
