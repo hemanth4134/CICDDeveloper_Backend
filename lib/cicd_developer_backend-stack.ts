@@ -14,10 +14,8 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const githubToken = new secretsmanager.Secret(this, 'GitHubTokenSecret', {
-  secretName: 'hemanthcicd',
-  secretStringValue: cdk.SecretValue.unsafePlainText('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'),
-});
+const githubTokenSecret = secretsmanager.Secret.fromSecretNameV2(this, 'GitHubTokenSecret', 'githubhemanth');
+
 
     // S3 Bucket
     const bucket = new s3.Bucket(this, 'DevPortalBucket');
