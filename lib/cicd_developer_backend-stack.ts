@@ -16,96 +16,75 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
     // Load the GitHub token secret
     const githubTokenSecret = secretsmanager.Secret.fromSecretNameV2(this, 'GitHubTokenSecret', 'hemanthgithubtoken');
 
-    // S3 Bucket
-    const bucket = new s3.Bucket(this, 'DevPortalBucket');
-
     // DynamoDB Table
-    const table = new dynamodb.Table(this, 'DevPortalTable', {
+    const table = new dynamodb.Table(this, 'ProvisioningRequests', {
       partitionKey: { name: 'requestId', type: dynamodb.AttributeType.STRING },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // Lambda Function
-    const fn = new lambda.Function(this, 'DevPortalLambda', {
+    // IAM Role for Lambda to create AWS services
+    const lambdaRole = new iam.Role(this, 'DynamicLambdaRole', {
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+    });
+
+    lambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess')); // For demo only; fine-grain this in prod
+
+    // Lambda Function to handle incoming requests
+    const provisioner = new lambda.Function(this, 'ServiceProvisionerLambda', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
       code: lambda.Code.fromInline(`
         const AWS = require("aws-sdk");
         const { v4: uuidv4 } = require("uuid");
         const ddb = new AWS.DynamoDB.DocumentClient();
+        const apigw = new AWS.APIGateway();
+        const s3 = new AWS.S3();
+        const lambda = new AWS.Lambda();
+        const ecr = new AWS.ECR();
+
         exports.handler = async (event) => {
           const body = JSON.parse(event.body);
-          const item = { requestId: uuidv4(), ...body };
+          const requestId = uuidv4();
+
+          const item = { requestId, ...body };
           await ddb.put({ TableName: process.env.TABLE_NAME, Item: item }).promise();
-          return { statusCode: 200, body: JSON.stringify(item) };
+
+          const results = { requestId };
+
+          // Example: Create an S3 bucket if requested
+          if (body.services.includes("s3")) {
+            const bucketName = \`demo-bucket-\${requestId}\`;
+            await s3.createBucket({ Bucket: bucketName }).promise();
+            results.s3Bucket = bucketName;
+          }
+
+          // Example: Create an API Gateway (REST API)
+          if (body.services.includes("apigateway")) {
+            const restApi = await apigw.createRestApi({ name: \`API-\${requestId}\` }).promise();
+            results.apiGatewayId = restApi.id;
+          }
+
+          // Similarly, you can handle ECR and Lambda creation
+
+          return { statusCode: 200, body: JSON.stringify(results) };
         };
       `),
       environment: {
         TABLE_NAME: table.tableName,
       },
+      role: lambdaRole,
+      timeout: cdk.Duration.minutes(2),
     });
 
-    table.grantWriteData(fn);
+    table.grantWriteData(provisioner);
 
     // API Gateway
-    const api = new apigateway.LambdaRestApi(this, 'DevPortalAPI', {
-      handler: fn,
+    const api = new apigateway.LambdaRestApi(this, 'DynamicProvisioningAPI', {
+      handler: provisioner,
       proxy: false,
     });
 
-    const form = api.root.addResource('submit');
-    form.addMethod('POST');
-
-    // CodeBuild Project
-    const buildProject = new codebuild.PipelineProject(this, 'DevPortalBuild', {
-      environment: {
-        buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
-      },
-    });
-
-    // Pipeline Artifacts
-    const sourceOutput = new codepipeline.Artifact();
-    const buildOutput = new codepipeline.Artifact();
-
-    // CodePipeline
-    new codepipeline.Pipeline(this, 'DevPortalPipeline', {
-      pipelineName: 'DevPortalPipeline',
-      stages: [
-        {
-          stageName: 'Source',
-          actions: [
-            new codepipeline_actions.GitHubSourceAction({
-              actionName: 'GitHub_Source',
-              owner: 'hemanth', // Replace with your GitHub username
-              repo: 'CICDDeveloper_Backend', // Replace with your GitHub repository
-              branch: 'main',
-              oauthToken: githubTokenSecret.secretValueFromJson('githubtokenhemanth'), // ✅ Extracts 'token' key
-              output: sourceOutput,
-            }),
-          ],
-        },
-        {
-          stageName: 'Build',
-          actions: [
-            new codepipeline_actions.CodeBuildAction({
-              actionName: 'Build',
-              project: buildProject,
-              input: sourceOutput,
-              outputs: [buildOutput],
-            }),
-          ],
-        },
-        {
-          stageName: 'Deploy',
-          actions: [
-            new codepipeline_actions.S3DeployAction({
-              actionName: 'DeployToS3',
-              input: buildOutput,
-              bucket: bucket,
-            }),
-          ],
-        },
-      ],
-    });
+    const submit = api.root.addResource('submit');
+    submit.addMethod('POST');
   }
 }
