@@ -80,7 +80,7 @@ const githubTokenSecret = secretsmanager.Secret.fromSecretNameV2(this, 'GitHubTo
               owner: 'hemanth', // ⬅️ Replace with your GitHub username
               repo: 'CICDDeveloper_Backend',        // ⬅️ Replace with your GitHub repo name
               branch: 'main',
-              oauthToken: githubToken.secretValue,
+              oauthToken: githubhemanth.secretValue,
               output: sourceOutput,
             }),
           ],
