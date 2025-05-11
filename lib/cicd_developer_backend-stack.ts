@@ -14,7 +14,7 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
     super(scope, id, props);
 
     // Load the GitHub token secret
-    const githubTokenSecret = secretsmanager.Secret.fromSecretNameV2(this, 'GitHubTokenSecret', 'githubhemanth');
+    const githubTokenSecret = secretsmanager.Secret.fromSecretNameV2(this, 'GitHubTokenSecret', 'hemanthgithubtoken');
 
     // S3 Bucket
     const bucket = new s3.Bucket(this, 'DevPortalBucket');
@@ -79,7 +79,7 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
               owner: 'hemanth', // Replace with your GitHub username
               repo: 'CICDDeveloper_Backend', // Replace with your GitHub repository
               branch: 'main',
-              oauthToken: githubTokenSecret.secretValueFromJson('token'), // ✅ Extracts 'token' key
+              oauthToken: githubTokenSecret.secretValueFromJson('githubtokenhemanth'), // ✅ Extracts 'token' key
               output: sourceOutput,
             }),
           ],
