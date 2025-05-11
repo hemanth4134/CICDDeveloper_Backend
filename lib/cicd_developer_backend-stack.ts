@@ -7,15 +7,14 @@ import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import { SecretValue } from 'aws-cdk-lib';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 
 export class CicdDeveloperBackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-const githubTokenSecret = secretsmanager.Secret.fromSecretNameV2(this, 'GitHubTokenSecret', 'githubhemanth');
-
+    // Load the GitHub token secret
+    const githubTokenSecret = secretsmanager.Secret.fromSecretNameV2(this, 'GitHubTokenSecret', 'githubhemanth');
 
     // S3 Bucket
     const bucket = new s3.Bucket(this, 'DevPortalBucket');
@@ -77,10 +76,10 @@ const githubTokenSecret = secretsmanager.Secret.fromSecretNameV2(this, 'GitHubTo
           actions: [
             new codepipeline_actions.GitHubSourceAction({
               actionName: 'GitHub_Source',
-              owner: 'hemanth', // ⬅️ Replace with your GitHub username
-              repo: 'CICDDeveloper_Backend',        // ⬅️ Replace with your GitHub repo name
+              owner: 'hemanth', // Replace with your GitHub username
+              repo: 'CICDDeveloper_Backend', // Replace with your GitHub repository
               branch: 'main',
-              oauthToken: githubhemanth.secretValue,
+              oauthToken: githubTokenSecret.secretValueFromJson('token'), // ✅ Extracts 'token' key
               output: sourceOutput,
             }),
           ],
