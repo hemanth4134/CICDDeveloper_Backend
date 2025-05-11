@@ -85,7 +85,27 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
       proxy: false,
     });
 
+    
+
     const submit = api.root.addResource('submit');
-    submit.addMethod('POST');
+   submit.addMethod('POST', undefined, {
+  methodResponses: [
+    {
+      statusCode: '200',
+      responseParameters: {
+        'method.response.header.Access-Control-Allow-Origin': true,
+        'method.response.header.Access-Control-Allow-Headers': true,
+        'method.response.header.Access-Control-Allow-Methods': true,
+      },
+    },
+  ],
+});
+
+submit.addCorsPreflight({
+  allowOrigins: ['https://master.d3opo2tk5q8iha.amplifyapp.com'],
+  allowMethods: ['POST', 'OPTIONS'],
+  allowHeaders: ['Content-Type'],
+});
+
   }
 }
