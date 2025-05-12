@@ -23,14 +23,14 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // IAM Role for Lambda to create AWS services
+    // IAM Role for Lambda
     const lambdaRole = new iam.Role(this, 'DynamicLambdaRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
     });
 
-    lambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess')); // For demo only; fine-grain this in prod
+    lambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess'));
 
-    // Lambda Function to handle incoming requests
+    // Lambda function
     const provisioner = new lambda.Function(this, 'ServiceProvisionerLambda', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
@@ -40,34 +40,36 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
         const ddb = new AWS.DynamoDB.DocumentClient();
         const apigw = new AWS.APIGateway();
         const s3 = new AWS.S3();
-        const lambda = new AWS.Lambda();
-        const ecr = new AWS.ECR();
 
         exports.handler = async (event) => {
           const body = JSON.parse(event.body);
           const requestId = uuidv4();
-
           const item = { requestId, ...body };
+
           await ddb.put({ TableName: process.env.TABLE_NAME, Item: item }).promise();
 
           const results = { requestId };
 
-          // Example: Create an S3 bucket if requested
           if (body.services.includes("s3")) {
             const bucketName = \`demo-bucket-\${requestId}\`;
             await s3.createBucket({ Bucket: bucketName }).promise();
             results.s3Bucket = bucketName;
           }
 
-          // Example: Create an API Gateway (REST API)
           if (body.services.includes("apigateway")) {
             const restApi = await apigw.createRestApi({ name: \`API-\${requestId}\` }).promise();
             results.apiGatewayId = restApi.id;
           }
 
-          // Similarly, you can handle ECR and Lambda creation
-
-          return { statusCode: 200, body: JSON.stringify(results) };
+          return {
+            statusCode: 200,
+            headers: {
+              "Access-Control-Allow-Origin": "https://master.d3opo2tk5q8iha.amplifyapp.com",
+              "Access-Control-Allow-Headers": "Content-Type",
+              "Access-Control-Allow-Methods": "OPTIONS,POST"
+            },
+            body: JSON.stringify(results),
+          };
         };
       `),
       environment: {
@@ -80,30 +82,32 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
     table.grantWriteData(provisioner);
 
     // API Gateway
-   const api = new apigateway.LambdaRestApi(this, 'DynamicProvisioningAPI', {
-  handler: provisioner,
-  proxy: false,
-});
+    const api = new apigateway.LambdaRestApi(this, 'DynamicProvisioningAPI', {
+      handler: provisioner,
+      proxy: false,
+    });
 
-const submit = api.root.addResource('submit');
+    const submit = api.root.addResource('submit');
 
-submit.addMethod('POST', new apigateway.LambdaIntegration(provisioner), {
-  methodResponses: [
-    {
-      statusCode: '200',
-      responseParameters: {
-        'method.response.header.Access-Control-Allow-Origin': true,
-        'method.response.header.Access-Control-Allow-Headers': true,
-        'method.response.header.Access-Control-Allow-Methods': true,
-      },
-    },
-  ],
-});
+    submit.addMethod('POST', new apigateway.LambdaIntegration(provisioner, {
+      proxy: true,
+    }), {
+      methodResponses: [
+        {
+          statusCode: '200',
+          responseParameters: {
+            'method.response.header.Access-Control-Allow-Origin': true,
+            'method.response.header.Access-Control-Allow-Headers': true,
+            'method.response.header.Access-Control-Allow-Methods': true,
+          },
+        },
+      ],
+    });
 
-submit.addCorsPreflight({
-  allowOrigins: ['https://master.d3opo2tk5q8iha.amplifyapp.com'],
-  allowMethods: ['POST', 'OPTIONS'],
-  allowHeaders: ['Content-Type'],
-});
-
-  })
+    submit.addCorsPreflight({
+      allowOrigins: ['https://master.d3opo2tk5q8iha.amplifyapp.com'],
+      allowMethods: ['POST', 'OPTIONS'],
+      allowHeaders: ['Content-Type'],
+    });
+  }
+}
