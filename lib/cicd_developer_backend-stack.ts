@@ -80,15 +80,14 @@ export class CicdDeveloperBackendStack extends cdk.Stack {
     table.grantWriteData(provisioner);
 
     // API Gateway
-    const api = new apigateway.LambdaRestApi(this, 'DynamicProvisioningAPI', {
-      handler: provisioner,
-      proxy: false,
-    });
+   const api = new apigateway.LambdaRestApi(this, 'DynamicProvisioningAPI', {
+  handler: provisioner,
+  proxy: false,
+});
 
-    
+const submit = api.root.addResource('submit');
 
-    const submit = api.root.addResource('submit');
-   submit.addMethod('POST', undefined, {
+submit.addMethod('POST', new apigateway.LambdaIntegration(provisioner), {
   methodResponses: [
     {
       statusCode: '200',
@@ -107,5 +106,4 @@ submit.addCorsPreflight({
   allowHeaders: ['Content-Type'],
 });
 
-  }
-}
+  })
