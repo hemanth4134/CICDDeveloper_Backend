@@ -19,7 +19,7 @@ phases:
   build:
     commands:
       - echo Building the application...
-      - npm run build # Replace with your build command if different
+      # - npm run build # Replace with your build command if different
       - cdk synth
       - cdk bootstrap
       - cdk deploy --require-approval never
