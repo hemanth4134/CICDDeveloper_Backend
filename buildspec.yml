@@ -22,7 +22,7 @@ phases:
       - echo Building the application...
       # - npm run build # Replace with your build command if different
       - cdk synth
-      - cdk bootstrap
+      # - cdk bootstrap
       - cdk deploy --require-approval never
 
 #   post_build:
