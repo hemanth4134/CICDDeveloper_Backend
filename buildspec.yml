@@ -11,6 +11,8 @@ phases:
       - npm install aws-cdk-lib constructs
       # - npm install -g serverless@3.34.0
       - npm install -g aws-cdk
+      - cd lib
+      - echo pwd
       - npm install aws-sdk uuid
   pre_build:
     commands:
