@@ -13,7 +13,9 @@ phases:
       - npm install -g aws-cdk
       - cd lib
       - echo pwd
+      - npm install
       - npm install aws-sdk uuid
+      - cd ..
   pre_build:
     commands:
       - echo Running lint and tests...
