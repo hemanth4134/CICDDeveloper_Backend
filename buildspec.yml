@@ -3,11 +3,15 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      nodejs: 18 # Change based on your app's Node.js version
+      nodejs: 18.x
+      java: latest # Change based on your app's Node.js version
     commands:
       - echo Installing dependencies...
-      - npm install
-
+      - npm install -g
+      - npm install aws-cdk-lib constructs
+      # - npm install -g serverless@3.34.0
+      - npm install -g aws-cdk
+      - npm install aws-sdk uuid
   pre_build:
     commands:
       - echo Running lint and tests...
@@ -17,9 +21,9 @@ phases:
   build:
     commands:
       - echo Building the application...
-      - npm run build # Replace with your build command if different
-      - cdk synth
-      - cdk bootstrap
+      # - npm run build # Replace with your build command if different
+      # - cdk synth
+      # - cdk bootstrap
       - cdk deploy --require-approval never
 
 #   post_build:
